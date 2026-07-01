@@ -1,22 +1,32 @@
-import { PrismaClient } from "@prisma/client";
+import fs from "fs/promises";
+import bcrypt from "bcrypt";
 
-const prisma = new PrismaClient();
+const FILE_PATH = "./clinicflow.sql"; // Change to your SQL file path
+const PASSWORD = "password123";
+const SALT_ROUNDS = 10;
 
-async function testConnection() {
-  try {
-    await prisma.$connect();
-    console.log("Connected to the database!");
+async function updateHashes() {
+    try {
+        let sql = await fs.readFile(FILE_PATH, "utf8");
 
-    // Optional: execute a simple query
-    const result = await prisma.$queryRaw`SELECT NOW()`;
+        // Generate one hash (same password for all seeded users)
+        const hash = await bcrypt.hash(PASSWORD, SALT_ROUNDS);
 
-    console.log("Database time:", result);
-  } catch (error) {
-    console.error("❌ Connection failed");
-    console.error(error);
-  } finally {
-    await prisma.$disconnect();
-  }
+        // Replace every bcrypt hash in the SQL file
+        sql = sql.replace(
+            /\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}/g,
+            hash
+        );
+
+        await fs.writeFile(FILE_PATH, sql);
+
+        console.log("✅ Password hashes updated successfully.");
+        console.log(`Password for all users is: ${PASSWORD}`);
+        console.log(`Generated hash: ${hash}`);
+
+    } catch (err) {
+        console.error(err);
+    }
 }
 
-testConnection();
+updateHashes();

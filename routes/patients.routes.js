@@ -1,7 +1,7 @@
-// src/routes/patient.routes.js
 
 import { Router } from "express";
-
+import { auth } from "../middleware/auth.middleware.js";
+import { role } from "../middleware/role.middleware.js";
 import {
     getPatients,
     getPatient,
@@ -20,6 +20,7 @@ router.post("/", createPatient);
 
 router.put("/:id", updatePatient);
 
-router.delete("/:id", deletePatient);
+router.delete("/:id", auth,
+    role("admin"), deletePatient);
 
 export default router;
