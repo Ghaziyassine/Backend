@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -12,4 +6,86 @@ datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
+}
+
+enum user_role {
+  admin
+  staff
+}
+
+enum appointment_status {
+  pending
+  confirmed
+  cancelled
+}
+
+model users {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  full_name     String    @db.VarChar(150)
+  email         String    @unique @db.VarChar(150)
+  password_hash String
+  role          user_role @default(staff)
+
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @default(now()) @db.Timestamptz(6)
+  deleted_at DateTime? @db.Timestamptz(6)
+
+  appointments appointments[]
+
+  audit_logs audit_log[]
+
+  @@map("users")
+}
+
+model patients {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  full_name  String   @db.VarChar(150)
+  cin        String   @unique @db.VarChar(30)
+  phone      String   @db.VarChar(20)
+  birth_date DateTime @db.Date
+  address    String?
+
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @default(now()) @db.Timestamptz(6)
+  deleted_at DateTime? @db.Timestamptz(6)
+
+  appointments appointments[]
+
+  @@map("patients")
+}
+
+model appointments {
+  id               String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  patient_id       String               @db.Uuid
+  appointment_date DateTime             @db.Timestamptz(6)
+  status           appointment_status   @default(pending)
+  reason           String               @db.VarChar(255)
+  notes            String?
+  created_by       String               @db.Uuid
+
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @default(now()) @db.Timestamptz(6)
+
+  patient patients @relation(fields: [patient_id], references: [id])
+  user    users    @relation(fields: [created_by], references: [id])
+
+  @@map("appointments")
+}
+
+
+model audit_log {
+  id           String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  table_name   String  @db.VarChar(50)
+  record_id    String  @db.Uuid
+  action       String  @db.VarChar(20)
+  performed_by String? @db.Uuid
+
+  old_data Json?
+  new_data Json?
+
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+
+  user users? @relation(fields: [performed_by], references: [id])
+
+  @@map("audit_log")
 }
